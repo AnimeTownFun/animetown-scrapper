@@ -122,4 +122,43 @@ v1Router.get("/details/:id", async (req: Request, res: Response) => {
   }
 });
 
+v1Router.get("/search/:word/:page", async (req: Request, res: Response) => {
+  const results: any[] = [];
+  const word = req.params.word;
+  const page = parseInt(req.params.page, 10);
+
+  if (isNaN(page)) {
+    return res.status(400).json({ results });
+  }
+
+  const url = `${baseUrl}/search.html?keyword=${word}&page=${page}`;
+
+  try {
+    const response = await axios.get(url);
+    const html = response?.data;
+    const $ = load(html);
+
+    $("div.last_episodes ul.items li").each(function (index, element) {
+      const title = $(this)?.find("div.img a")?.attr("title");
+      const href = $(this)?.find("div.img a")?.attr("href");
+      const id = href?.slice(10);
+      const image = $(this)?.find("div.img a img")?.attr("src");
+      let released = $(this)?.find("p.released")?.text();
+
+      if (released === "") {
+        released = "Date not updated";
+      }
+
+      results[index] = { title, id, image, released };
+    });
+
+    res.status(200).json({ results });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Internal server error. Please try again later." });
+  }
+});
+
 export default v1Router;
